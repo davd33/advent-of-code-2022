@@ -4,7 +4,9 @@ import com.google.common.io.Resources;
 import davd33.aoc.domain.ElfStuff;
 import io.vavr.Function2;
 import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
@@ -13,14 +15,54 @@ import lombok.extern.log4j.Log4j2;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
-import static java.lang.Integer.parseInt;
 import static io.vavr.API.*;
-import static io.vavr.Patterns.*;
+import static io.vavr.Patterns.$Tuple2;
+import static java.lang.Integer.parseInt;
 
 @Log4j2
 public class App {
 
     public static void main(String[] args) {
+        runDay3();
+    }
+
+    private static void runDay3() {
+        final Map<Character, Integer> priorities = Vector.ofAll("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                        .toCharArray())
+                .zipWithIndex().toMap(t -> Tuple.of(t._1, t._2 + 1));
+
+        URL day2URL = Resources.getResource("input/d3");
+        Try<String> inputTry = Try.of(() -> Resources.toString(day2URL, StandardCharsets.UTF_8));
+
+        inputTry.map(s -> Vector.of(s.split("\n"))).map(lines ->
+                        lines.map(line ->
+                                Vector.ofAll(line.toCharArray()).zipWithIndex().sortBy(t -> t._2)
+                                        .takeUntil(charIndexTuple -> charIndexTuple._2 == (line.length() / 2))
+                                        .map(t -> t._1))
+                        .zipWith(lines.map(line ->
+                                        Vector.ofAll(line.toCharArray()).zipWithIndex().sortBy(t -> t._2)
+                                                .dropUntil(charIndexTuple -> charIndexTuple._2 == (line.length() / 2))
+                                                .map(t -> t._1)),
+                                Tuple2::new)
+                                .flatMap(firstSecondRucksack -> firstSecondRucksack._1
+                                        .filter(firstSecondRucksack._2::contains)
+                                        .distinct()
+                                        .map(priorities::get)
+                                        .filter(Option::isDefined)
+                                        .map(Option::get))
+                                .sum())
+                .forEach(log::info);
+
+        inputTry.map(input -> input.split("\n"))
+                .map(lines -> Vector.ofAll(Vector.of(lines).grouped(3))
+                        .map(elfGroup -> elfGroup.map(elfSack -> Vector.ofAll(elfSack.toCharArray()).toSet())
+                                .fold(Set(), (acc, set) -> acc.isEmpty() ? set : set.intersect(acc))
+                                .map(priorities::get)
+                                .filter(Option::isDefined)
+                                .map(Option::get)
+                                .sum())
+                        .sum())
+                .forEach(log::info);
     }
 
     private static void runDay2() {
