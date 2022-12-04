@@ -5,9 +5,7 @@ import davd33.aoc.domain.ElfStuff;
 import io.vavr.Function2;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
-import io.vavr.collection.List;
-import io.vavr.collection.Map;
-import io.vavr.collection.Vector;
+import io.vavr.collection.*;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
 import lombok.extern.log4j.Log4j2;
@@ -23,7 +21,35 @@ import static java.lang.Integer.parseInt;
 public class App {
 
     public static void main(String[] args) {
-        runDay3();
+        runDay4();
+    }
+
+    private static void runDay4() {
+        URL day2URL = Resources.getResource("input/d4");
+        Try<String> inputTry = Try.of(() -> Resources.toString(day2URL, StandardCharsets.UTF_8));
+
+        Try<Vector<Tuple2<Set<Integer>, Set<Integer>>>> pairOfElvesRanges = inputTry.map(s -> Vector.of(s.split("\n")))
+                .map(lines -> lines.map(line -> line.split(","))
+                        .map(elfRanges -> Tuple.of(
+                                Tuple.of(
+                                        parseInt(elfRanges[0].split("-")[0]),
+                                        parseInt(elfRanges[0].split("-")[1])),
+                                Tuple.of(
+                                        parseInt(elfRanges[1].split("-")[0]),
+                                        parseInt(elfRanges[1].split("-")[1]))))
+                        .map(elfPairRanges -> elfPairRanges
+                                .map1(range1 -> Stream.from(range1._1).takeUntil(i -> i > range1._2).toSet())
+                                .map2(range2 -> Stream.from(range2._1).takeUntil(i -> i > range2._2).toSet())));
+
+        pairOfElvesRanges.map(p -> p
+                        .filter(elfPair -> elfPair._1.containsAll(elfPair._2) || elfPair._2.containsAll(elfPair._1))
+                        .size())
+                .forEach(log::info);
+
+        pairOfElvesRanges.map(p -> p
+                        .filter(elfPair -> !elfPair._1.intersect(elfPair._2).isEmpty())
+                        .size())
+                .forEach(log::info);
     }
 
     private static void runDay3() {
