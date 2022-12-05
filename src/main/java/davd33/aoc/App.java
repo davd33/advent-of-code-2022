@@ -12,6 +12,8 @@ import lombok.extern.log4j.Log4j2;
 
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static io.vavr.API.*;
 import static io.vavr.Patterns.$Tuple2;
@@ -21,7 +23,68 @@ import static java.lang.Integer.parseInt;
 public class App {
 
     public static void main(String[] args) {
-        runDay4();
+        runDay5();
+    }
+
+    private static void runDay5() {
+        final URL url = Resources.getResource("input/d5");
+        final String input = Try.of(() -> Resources.toString(url, StandardCharsets.UTF_8))
+                .onFailure(log::error)
+                .get();
+        final String[] stackActionsInput = input.split(" 1   2   3");
+        Vector<String> stackInput = stackActionsInput[0].lines().collect(Vector.collector());
+        HashMap<Integer, List<Character>> stacks = stackInput.foldRight(HashMap.empty(), (line, acc) ->
+                Vector.ofAll(line.toCharArray()).grouped(4)
+                        .zipWithIndex()
+                        .map(charsIndex -> Tuple.of(charsIndex._2, List.of(charsIndex._1.get(1))))
+                        .filter(t -> t._2.head() != ' ')
+                        .foldRight(acc, (crate, acc2) -> acc2.put(crate._1,
+                                acc2.getOrElse(crate._1, List.empty()).push(crate._2.head()))));
+        Vector<String> actionInput = stackActionsInput[1].lines().collect(Vector.collector());
+        String part1Result = actionInput.filter(l -> !l.isBlank()).foldLeft(stacks, (newStacks, line) -> {
+                    log.debug("{}", line);
+                    // move {how many} from {stack} to {stack}
+                    Pattern p = Pattern.compile("move ([0-9]+) from ([0-9]+) to ([0-9]+)");
+                    Matcher m = p.matcher(line);
+
+                    if (m.find())
+                        return Vector.fill(parseInt(m.group(1)), 0).foldLeft(newStacks, (acc, __) -> {
+                            int from = parseInt(m.group(2)) - 1;
+                            int to = parseInt(m.group(3)) - 1;
+                            return acc
+                                    .put(from, acc.get(from).get().tail())
+                                    .put(to, acc.get(to).get().push(acc.get(from).get().head()));
+                        });
+                    else
+                        return newStacks;
+                })
+                .foldLeft("", (acc, e) -> acc + e._2.head());
+        log.info("Part 1: {}", part1Result);
+
+        String part2Result = actionInput.filter(l -> !l.isBlank()).foldLeft(stacks, (newStacks, line) -> {
+                    log.debug("{}", line);
+                    // move {how many} from {stack} to {stack}
+                    Pattern p = Pattern.compile("move ([0-9]+) from ([0-9]+) to ([0-9]+)");
+                    Matcher m = p.matcher(line);
+
+                    if (m.find()) {
+                        int howMany = parseInt(m.group(1));
+                        int from = parseInt(m.group(2)) - 1;
+                        int to = parseInt(m.group(3)) - 1;
+                        var res = newStacks
+                                    .put(from, newStacks.get(from).get()
+                                            .drop(howMany))
+                                    .put(to, newStacks.get(to).get()
+                                            .prependAll(newStacks.get(from).get().take(howMany)));
+                        res.forEach((k, v) -> log.debug("{}: {}", k, v));
+                        return res;
+                    } else {
+                        newStacks.forEach((k, v) -> log.debug("{}: {}", k, v));
+                        return newStacks;
+                    }
+                })
+                .foldLeft("", (acc, e) -> acc + e._2.head());
+        log.info("Part 2: {}", part2Result);
     }
 
     private static void runDay4() {
