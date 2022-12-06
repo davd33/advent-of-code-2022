@@ -23,7 +23,28 @@ import static java.lang.Integer.parseInt;
 public class App {
 
     public static void main(String[] args) {
-        runDay5();
+        runDay6();
+    }
+
+    private static void runDay6() {
+        final URL url = Resources.getResource("input/d6");
+        final String input = Try.of(() -> Resources.toString(url, StandardCharsets.UTF_8))
+                .onFailure(log::error)
+                .get();
+        final int START_OF_PACKET_MARKER = 4;
+        final int START_OF_MSG_MARKER = 14;
+        Vector.ofAll(Vector.ofAll(input.lines()).head().toCharArray())
+                .sliding(START_OF_PACKET_MARKER)
+                .zipWithIndex()
+                .find(s -> s._1.size() == s._1.toSet().size())
+                .map(s -> s._2 + START_OF_PACKET_MARKER)
+                .forEach(i -> log.info("Part 1: {}", i));
+        Vector.ofAll(Vector.ofAll(input.lines()).head().toCharArray())
+                .sliding(START_OF_MSG_MARKER)
+                .zipWithIndex()
+                .find(s -> s._1.size() == s._1.toSet().size())
+                .map(s -> s._2 + START_OF_MSG_MARKER)
+                .forEach(i -> log.info("Part 2: {}", i));
     }
 
     private static void runDay5() {
