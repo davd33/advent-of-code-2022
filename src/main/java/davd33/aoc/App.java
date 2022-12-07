@@ -1,6 +1,7 @@
 package davd33.aoc;
 
 import com.google.common.io.Resources;
+import davd33.aoc.domain.ElfDeviceTerminal;
 import davd33.aoc.domain.ElfStuff;
 import io.vavr.Function2;
 import io.vavr.Tuple;
@@ -23,7 +24,31 @@ import static java.lang.Integer.parseInt;
 public class App {
 
     public static void main(String[] args) {
-        runDay6();
+        runDay7();
+    }
+
+    public static void runDay7() {
+        final URL url = Resources.getResource("input/d7");
+        final String input = Try.of(() -> Resources.toString(url, StandardCharsets.UTF_8))
+                .onFailure(log::error)
+                .get();
+        ElfDeviceTerminal elfDeviceTerminal = Vector.ofAll(input.lines())
+                .tail()
+                .foldLeft(ElfDeviceTerminal.newRoot(), (acc, line) ->
+                        Try.of(() -> acc.parseLine(line)).get());
+
+        log.info("Part 1 - \n{}", elfDeviceTerminal.getRoot()
+                .collectSizes()
+                .filter(t -> ElfDeviceTerminal.Type.directory.equals(t._3) && t._2 <= 100000)
+                .foldLeft(0, (acc, t) -> acc + t._2));
+
+        int SPACE_LEFT = 70000000 - elfDeviceTerminal.getRoot().totalSize();
+        int INCREASE_NEEDED = 30000000 - SPACE_LEFT;
+
+        log.info("Part 2 - \n{}", elfDeviceTerminal.getRoot()
+                .collectSizes()
+                .sortBy(t -> t._2)
+                .find(t -> ElfDeviceTerminal.Type.directory.equals(t._3) && t._2 >= INCREASE_NEEDED));
     }
 
     private static void runDay6() {
