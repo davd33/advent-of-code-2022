@@ -3,6 +3,7 @@ package davd33.aoc;
 import com.google.common.io.Resources;
 import davd33.aoc.domain.ElfDeviceTerminal;
 import davd33.aoc.domain.ElfStuff;
+import davd33.aoc.domain.ForestScan;
 import io.vavr.Function2;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
@@ -24,7 +25,17 @@ import static java.lang.Integer.parseInt;
 public class App {
 
     public static void main(String[] args) {
-        runDay7();
+        runDay8();
+    }
+
+    public static void runDay8() {
+        URL inputUrl = Resources.getResource("input/d8");
+        String input = Try.of(() -> Resources.toString(inputUrl, StandardCharsets.UTF_8)).get();
+
+        String[] lines = input.lines().toArray(String[]::new);
+        ForestScan forestScan = new ForestScan(lines);
+        log.info("Day 8 - Part 1: {}", forestScan.countTrees());
+        log.info("Day 8 - Part 2: {}", forestScan.highestScenicScore());
     }
 
     public static void runDay7() {
