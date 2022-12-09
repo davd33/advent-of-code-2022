@@ -4,6 +4,7 @@ import com.google.common.io.Resources;
 import davd33.aoc.domain.ElfDeviceTerminal;
 import davd33.aoc.domain.ElfStuff;
 import davd33.aoc.domain.ForestScan;
+import io.vavr.Function0;
 import io.vavr.Function2;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
@@ -25,7 +26,160 @@ import static java.lang.Integer.parseInt;
 public class App {
 
     public static void main(String[] args) {
-        runDay8();
+        runDay9();
+    }
+
+    public static void runDay9() {
+        URL inputUrl = Resources.getResource("input/d9-test");
+        String input = Try.of(() -> Resources.toString(inputUrl, StandardCharsets.UTF_8)).get();
+
+        Function2<Tuple2<Integer, Integer>, Tuple2<Integer, Integer>,
+                Tuple2<Tuple2<Integer, Integer>, Tuple2<Integer, Integer>>> computeHAntTPos = (newHPos, oldTPos) ->
+                Tuple.of(Match(oldTPos).of(
+                                // on same horizontal line - left
+                                Case($Tuple2($((Integer x) -> x < (newHPos._1) - 1), $(newHPos._2)),
+                                        (x, y) -> {
+                                            log.debug("horizontal left \n{} - {}", oldTPos, newHPos);
+                                            return Tuple.of(x + 1, y);
+                                        }),
+                                // on same horizontal line - right
+                                Case($Tuple2($((Integer x) -> x > (newHPos._1) + 1), $(newHPos._2)),
+                                        (x, y) -> {
+                                            log.debug("horizontal right \n{} - {}", oldTPos, newHPos);
+                                            return Tuple.of(x - 1, y);
+                                        }),
+
+                                // on same vertical line - up
+                                Case($Tuple2($(newHPos._1), $((Integer y) -> y > (newHPos._2) + 1)),
+                                        (x, y) -> {
+                                            log.debug("vertical up \n{} - {}", oldTPos, newHPos);
+                                            return Tuple.of(x, y - 1);
+                                        }),
+                                // on same vertical line - down
+                                Case($Tuple2($(newHPos._1), $((Integer y) -> y < (newHPos._2) - 1)),
+                                        (x, y) -> {
+                                            log.debug("vertical down \n{} - {}", oldTPos, newHPos);
+                                            return Tuple.of(x, y + 1);
+                                        }),
+
+                                // on diagonal up left
+                                Case($((Tuple2<Integer, Integer> xy) -> xy._1 < (newHPos._1 - 1) && xy._2 < (newHPos._2 - 1)),
+                                        (xy) -> {
+                                            log.debug("diag up left\n{} - {}", oldTPos, newHPos);
+                                            return Tuple.of(xy._1 + 1, xy._2 + 1);
+                                        }),
+
+                                // on diagonal down left
+                                Case($((Tuple2<Integer, Integer> xy) -> xy._1 < (newHPos._1 - 1) && xy._2 > (newHPos._2 + 1)),
+                                        (xy) -> {
+                                            log.debug("diag down left\n{} - {}", oldTPos, newHPos);
+                                            return Tuple.of(xy._1 + 1, xy._2 - 1);
+                                        }),
+
+                                // on diagonal up right
+                                Case($((Tuple2<Integer, Integer> xy) -> xy._1 > (newHPos._1 + 1) && xy._2 < (newHPos._2 - 1)),
+                                        (xy) -> {
+                                            log.debug("diag up right\n{} - {}", oldTPos, newHPos);
+                                            return Tuple.of(xy._1 - 1, xy._2 + 1);
+                                        }),
+
+                                // on diagonal down right
+                                Case($((Tuple2<Integer, Integer> xy) -> xy._1 > (newHPos._1 + 1) && xy._2 > (newHPos._2 + 1)),
+                                        (xy) -> {
+                                            log.debug("diag down right\n{} - {}", oldTPos, newHPos);
+                                            return Tuple.of(xy._1 - 1, xy._2 - 1);
+                                        }),
+
+
+                                // on diagonal up left
+                                Case($((Tuple2<Integer, Integer> xy) -> xy._1 < (newHPos._1 - 1) && xy._2 < (newHPos._2)),
+                                        (xy) -> {
+                                            log.debug("diag up left\n{} - {}", oldTPos, newHPos);
+                                            return Tuple.of(xy._1 + 1, xy._2 + 1);
+                                        }),
+
+                                // on diagonal down left
+                                Case($((Tuple2<Integer, Integer> xy) -> xy._1 < (newHPos._1 - 1) && xy._2 > (newHPos._2)),
+                                        (xy) -> {
+                                            log.debug("diag down left\n{} - {}", oldTPos, newHPos);
+                                            return Tuple.of(xy._1 + 1, xy._2 - 1);
+                                        }),
+
+                                // on diagonal up right
+                                Case($((Tuple2<Integer, Integer> xy) -> xy._1 > (newHPos._1 + 1) && xy._2 < (newHPos._2)),
+                                        (xy) -> {
+                                            log.debug("diag up right\n{} - {}", oldTPos, newHPos);
+                                            return Tuple.of(xy._1 - 1, xy._2 + 1);
+                                        }),
+
+                                // on diagonal down right
+                                Case($((Tuple2<Integer, Integer> xy) -> xy._1 > (newHPos._1 + 1) && xy._2 > (newHPos._2)),
+                                        (xy) -> {
+                                            log.debug("diag down right\n{} - {}", oldTPos, newHPos);
+                                            return Tuple.of(xy._1 - 1, xy._2 - 1);
+                                        }),
+
+
+                                // on diagonal up left
+                                Case($((Tuple2<Integer, Integer> xy) -> xy._1 < (newHPos._1) && xy._2 < (newHPos._2 - 1)),
+                                        (xy) -> {
+                                            log.debug("diag up left\n{} - {}", oldTPos, newHPos);
+                                            return Tuple.of(xy._1 + 1, xy._2 + 1);
+                                        }),
+
+                                // on diagonal down left
+                                Case($((Tuple2<Integer, Integer> xy) -> xy._1 < (newHPos._1) && xy._2 > (newHPos._2 + 1)),
+                                        (xy) -> {
+                                            log.debug("diag down left\n{} - {}", oldTPos, newHPos);
+                                            return Tuple.of(xy._1 + 1, xy._2 - 1);
+                                        }),
+
+                                // on diagonal up right
+                                Case($((Tuple2<Integer, Integer> xy) -> xy._1 > (newHPos._1) && xy._2 < (newHPos._2 - 1)),
+                                        (xy) -> {
+                                            log.debug("diag up right\n{} - {}", oldTPos, newHPos);
+                                            return Tuple.of(xy._1 - 1, xy._2 + 1);
+                                        }),
+
+                                // on diagonal down right
+                                Case($((Tuple2<Integer, Integer> xy) -> xy._1 > (newHPos._1) && xy._2 > (newHPos._2 + 1)),
+                                        (xy) -> {
+                                            log.debug("diag down right\n{} - {}", oldTPos, newHPos);
+                                            return Tuple.of(xy._1 - 1, xy._2 - 1);
+                                        }),
+
+                                // default
+                                Case($(), () -> {
+                                    log.debug("T unchanged\n{} - {}", oldTPos, newHPos);
+                                    return oldTPos;
+                                })),
+                        newHPos);
+
+        Function2<
+                Vector<Vector<Tuple2<Integer, Integer>>>,
+                Tuple2<String, Integer>,
+                Vector<Tuple2<Integer, Integer>>> fn =
+
+                (Vector<Vector<Tuple2<Integer, Integer>>> s, Tuple2<String, Integer> action) ->
+
+                        s.last().sliding(2, 2).map(knotPair ->
+                                computeHAntTPos.apply(Match(action._1).of(
+                                        Case($("R"), Tuple.of(knotPair.head()._1 + 1, knotPair.head()._2)),
+                                        Case($("D"), Tuple.of(knotPair.head()._1, knotPair.head()._2 - 1)),
+                                        Case($("L"), Tuple.of(knotPair.head()._1 - 1, knotPair.head()._2)),
+                                        Case($("U"), Tuple.of(knotPair.head()._1, knotPair.head()._2 + 1))),
+                                knotPair.last())._2).toVector();
+
+        var part1Res = Vector.ofAll(input.lines())
+                .map(l -> l.split(" "))
+                .map(a -> Tuple.of(a[0], parseInt(a[1])))
+                .foldLeft(Vector.of(Vector.fill(2, Tuple.of(0, 0))), (ropePositions, action) ->
+                        Vector.fill(action._2, 0).foldLeft(ropePositions, (acc, __) ->
+                                acc.append(fn.apply(acc, action))))
+                .map(IndexedSeq::last)
+                .toSet()
+                .size();
+        log.info("Part 1: {}", part1Res);
     }
 
     public static void runDay8() {
@@ -129,10 +283,10 @@ public class App {
                         int from = parseInt(m.group(2)) - 1;
                         int to = parseInt(m.group(3)) - 1;
                         var res = newStacks
-                                    .put(from, newStacks.get(from).get()
-                                            .drop(howMany))
-                                    .put(to, newStacks.get(to).get()
-                                            .prependAll(newStacks.get(from).get().take(howMany)));
+                                .put(from, newStacks.get(from).get()
+                                        .drop(howMany))
+                                .put(to, newStacks.get(to).get()
+                                        .prependAll(newStacks.get(from).get().take(howMany)));
                         res.forEach((k, v) -> log.debug("{}: {}", k, v));
                         return res;
                     } else {
@@ -182,14 +336,14 @@ public class App {
 
         inputTry.map(s -> Vector.of(s.split("\n"))).map(lines ->
                         lines.map(line ->
-                                Vector.ofAll(line.toCharArray()).zipWithIndex().sortBy(t -> t._2)
-                                        .takeUntil(charIndexTuple -> charIndexTuple._2 == (line.length() / 2))
-                                        .map(t -> t._1))
-                        .zipWith(lines.map(line ->
                                         Vector.ofAll(line.toCharArray()).zipWithIndex().sortBy(t -> t._2)
-                                                .dropUntil(charIndexTuple -> charIndexTuple._2 == (line.length() / 2))
-                                                .map(t -> t._1)),
-                                Tuple2::new)
+                                                .takeUntil(charIndexTuple -> charIndexTuple._2 == (line.length() / 2))
+                                                .map(t -> t._1))
+                                .zipWith(lines.map(line ->
+                                                Vector.ofAll(line.toCharArray()).zipWithIndex().sortBy(t -> t._2)
+                                                        .dropUntil(charIndexTuple -> charIndexTuple._2 == (line.length() / 2))
+                                                        .map(t -> t._1)),
+                                        Tuple2::new)
                                 .flatMap(firstSecondRucksack -> firstSecondRucksack._1
                                         .filter(firstSecondRucksack._2::contains)
                                         .distinct()
