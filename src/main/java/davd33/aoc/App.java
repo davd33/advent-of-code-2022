@@ -4,7 +4,6 @@ import com.google.common.io.Resources;
 import davd33.aoc.domain.ElfDeviceTerminal;
 import davd33.aoc.domain.ElfStuff;
 import davd33.aoc.domain.ForestScan;
-import io.vavr.Function0;
 import io.vavr.Function2;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
@@ -30,12 +29,11 @@ public class App {
     }
 
     public static void runDay9() {
-        URL inputUrl = Resources.getResource("input/d9-test");
+        URL inputUrl = Resources.getResource("input/d9");
         String input = Try.of(() -> Resources.toString(inputUrl, StandardCharsets.UTF_8)).get();
 
-        Function2<Tuple2<Integer, Integer>, Tuple2<Integer, Integer>,
-                Tuple2<Tuple2<Integer, Integer>, Tuple2<Integer, Integer>>> computeHAntTPos = (newHPos, oldTPos) ->
-                Tuple.of(Match(oldTPos).of(
+        Function2<Tuple2<Integer, Integer>, Tuple2<Integer, Integer>, Tuple2<Integer, Integer>> computeHAntTPos = (newHPos, oldTPos) ->
+                Match(oldTPos).of(
                                 // on same horizontal line - left
                                 Case($Tuple2($((Integer x) -> x < (newHPos._1) - 1), $(newHPos._2)),
                                         (x, y) -> {
@@ -152,34 +150,33 @@ public class App {
                                 Case($(), () -> {
                                     log.debug("T unchanged\n{} - {}", oldTPos, newHPos);
                                     return oldTPos;
-                                })),
-                        newHPos);
+                                }));
 
-        Function2<
-                Vector<Vector<Tuple2<Integer, Integer>>>,
-                Tuple2<String, Integer>,
-                Vector<Tuple2<Integer, Integer>>> fn =
-
-                (Vector<Vector<Tuple2<Integer, Integer>>> s, Tuple2<String, Integer> action) ->
-
-                        s.last().sliding(2, 2).map(knotPair ->
-                                computeHAntTPos.apply(Match(action._1).of(
-                                        Case($("R"), Tuple.of(knotPair.head()._1 + 1, knotPair.head()._2)),
-                                        Case($("D"), Tuple.of(knotPair.head()._1, knotPair.head()._2 - 1)),
-                                        Case($("L"), Tuple.of(knotPair.head()._1 - 1, knotPair.head()._2)),
-                                        Case($("U"), Tuple.of(knotPair.head()._1, knotPair.head()._2 + 1))),
-                                knotPair.last())._2).toVector();
-
-        var part1Res = Vector.ofAll(input.lines())
+        var res = Vector.ofAll(input.lines())
                 .map(l -> l.split(" "))
                 .map(a -> Tuple.of(a[0], parseInt(a[1])))
-                .foldLeft(Vector.of(Vector.fill(2, Tuple.of(0, 0))), (ropePositions, action) ->
-                        Vector.fill(action._2, 0).foldLeft(ropePositions, (acc, __) ->
-                                acc.append(fn.apply(acc, action))))
-                .map(IndexedSeq::last)
-                .toSet()
+                .foldLeft(Tuple.of(HashSet.empty(), Vector.fill(10, Tuple.of(0, 0))), (tailPosAndRopePositions, action) ->
+                    Vector.fill(action._2, 0).foldLeft(tailPosAndRopePositions, (acc, __) -> {
+                        Vector<Tuple2<Integer, Integer>> newPositions = acc._2.foldLeft(Vector.empty(), (positions, knot) -> {
+
+                            if (positions.isEmpty()) {
+                                var hKnot = positions.isEmpty() ? knot : positions.last();
+                                Tuple2<Integer, Integer> newHPos = Match(action._1).of(
+                                        Case($("R"), Tuple.of(hKnot._1 + 1, hKnot._2)),
+                                        Case($("D"), Tuple.of(hKnot._1, hKnot._2 - 1)),
+                                        Case($("L"), Tuple.of(hKnot._1 - 1, hKnot._2)),
+                                        Case($("U"), Tuple.of(hKnot._1, hKnot._2 + 1)));
+                                return positions.append(newHPos);
+                            }
+
+                            return positions.append(computeHAntTPos.apply(positions.last(), knot));
+                        });
+                        return Tuple.of(acc._1.add(newPositions.last()), newPositions);
+                    }))
+                ._1
                 .size();
-        log.info("Part 1: {}", part1Res);
+
+        log.info("Part 1: {}", res);
     }
 
     public static void runDay8() {
