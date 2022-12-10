@@ -1,6 +1,7 @@
 package davd33.aoc;
 
 import com.google.common.io.Resources;
+import davd33.aoc.domain.CPU;
 import davd33.aoc.domain.ElfDeviceTerminal;
 import davd33.aoc.domain.ElfStuff;
 import davd33.aoc.domain.ForestScan;
@@ -17,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.google.common.base.Predicates.instanceOf;
 import static io.vavr.API.*;
 import static io.vavr.Patterns.$Tuple2;
 import static java.lang.Integer.parseInt;
@@ -25,7 +27,25 @@ import static java.lang.Integer.parseInt;
 public class App {
 
     public static void main(String[] args) {
-        runDay9();
+        runDay10();
+    }
+
+    private static <T> T log(T value) {
+        log.info(value);
+        return value;
+    }
+
+    public static void runDay10() {
+        URL inputUrl = Resources.getResource("input/d10");
+        String input = Try.of(() -> Resources.toString(inputUrl, StandardCharsets.UTF_8)).get();
+        Integer part1res = Vector.ofAll(input.lines())
+                .foldLeft(new CPU(), (cpu, line) -> Match(CPU.parseInstruction(line)).of(
+                        Case($Tuple2($("noop"), $()), cpu::noop),
+                        Case($Tuple2($("addx"), $(instanceOf(Integer.class))), (__, x) -> cpu.addx(x))))
+                .getSignalStrengthHistory()
+                .filter(s -> Vector.of(20, 60, 100, 140, 180, 220).contains(s.getCycle()))
+                .foldLeft(0, (acc, s) -> acc + s.getSignalStrength());
+        log.info("Part 1: {}", part1res);
     }
 
     public static void runDay9() {
