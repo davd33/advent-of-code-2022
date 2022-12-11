@@ -1,18 +1,22 @@
 package davd33.aoc;
 
 import com.google.common.io.Resources;
-import davd33.aoc.domain.CPU;
-import davd33.aoc.domain.ElfDeviceTerminal;
-import davd33.aoc.domain.ElfStuff;
-import davd33.aoc.domain.ForestScan;
+import davd33.aoc.domain.*;
+import davd33.aoc.domain.MonkeysBusiness.Monkey;
 import io.vavr.Function2;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import io.vavr.collection.List;
+import io.vavr.collection.Map;
+import io.vavr.collection.Set;
+import io.vavr.collection.Stream;
+import io.vavr.collection.Vector;
 import io.vavr.collection.*;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
 import lombok.extern.log4j.Log4j2;
 
+import java.math.BigInteger;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
@@ -27,12 +31,55 @@ import static java.lang.Integer.parseInt;
 public class App {
 
     public static void main(String[] args) {
-        runDay10();
+        runDay11();
     }
 
     private static <T> T log(T value) {
         log.info(value);
         return value;
+    }
+
+    public static void runDay11() {
+        URL inputUrl = Resources.getResource("input/d11");
+        String input = Try.of(() -> Resources.toString(inputUrl, StandardCharsets.UTF_8)).get();
+
+        final String MONKEY_PATTERN = "Monkey (\\d*):";
+        final String START_ITEMS = "Starting items: ([0-9, ]+)?";
+        final String OPERATION = "Operation: new = old ([-*/+]) (\\d+|old)";
+        final String TEST = "Test: divisible by (\\d*)";
+        final String IF = "If [a-z]+: throw to monkey (\\d*)";
+
+        Vector<String> patterns = Vector.of(MONKEY_PATTERN, START_ITEMS, OPERATION, TEST, IF);
+
+        Vector<Monkey> monkeys = Vector.ofAll(input.lines())
+                .foldLeft(Vector.<Monkey>empty(), (acc, line) -> patterns.map(p -> Pattern.compile(p).matcher(line))
+                        .filter(Matcher::find)
+                        .headOption()
+                        .map(m -> Match(m.pattern().pattern()).of(
+                                Case($(MONKEY_PATTERN),
+                                        () -> acc.append(Monkey.of(parseInt(m.group(1))))),
+                                Case($(START_ITEMS), () -> acc.update(acc.size() - 1, acc.last().addWorries(
+                                        Vector.of(m.group(1).split(", ")).map(Integer::parseInt).map(BigInteger::valueOf)))),
+                                Case($(OPERATION), () -> acc.update(acc.size() - 1, acc.last().setNewWorryFn(Match(m.group(1)).of(
+                                        Case($("*"), __ -> old ->
+                                                old.multiply(m.group(2).equals("old") ?
+                                                        old : BigInteger.valueOf(parseInt(m.group(2))))),
+                                        Case($("+"), __ -> old ->
+                                                old.add(BigInteger.valueOf(parseInt(m.group(2)))))
+                                )))),
+                                Case($(TEST), () -> acc.update(acc.size() - 1, acc.last()
+                                        .setDivisibleBy(parseInt(m.group(1)))
+                                        .setThrowToFn(worry ->
+                                                worry.mod(BigInteger.valueOf(parseInt(m.group(1)))).equals(BigInteger.ZERO) ?
+                                                        0 : 1))),
+                                Case($(IF), () -> acc.update(acc.size() - 1, acc.last().addThrowToMonkey(parseInt(m.group(1))))),
+                                Case($(), () -> acc)))
+                        .getOrElse(acc));
+
+        final MonkeysBusiness mb2 = new MonkeysBusiness(1, 1000, true, Vector.of(1, 19, 20));
+        monkeys.forEach(mb2::addMonkey);
+        mb2.rounds(10000);
+        log.info("Result = {}", mb2.computeMonkeyBusiness());
     }
 
     public static void runDay10() {
@@ -54,145 +101,145 @@ public class App {
 
         Function2<Tuple2<Integer, Integer>, Tuple2<Integer, Integer>, Tuple2<Integer, Integer>> computeHAntTPos = (newHPos, oldTPos) ->
                 Match(oldTPos).of(
-                                // on same horizontal line - left
-                                Case($Tuple2($((Integer x) -> x < (newHPos._1) - 1), $(newHPos._2)),
-                                        (x, y) -> {
-                                            log.debug("horizontal left \n{} - {}", oldTPos, newHPos);
-                                            return Tuple.of(x + 1, y);
-                                        }),
-                                // on same horizontal line - right
-                                Case($Tuple2($((Integer x) -> x > (newHPos._1) + 1), $(newHPos._2)),
-                                        (x, y) -> {
-                                            log.debug("horizontal right \n{} - {}", oldTPos, newHPos);
-                                            return Tuple.of(x - 1, y);
-                                        }),
+                        // on same horizontal line - left
+                        Case($Tuple2($((Integer x) -> x < (newHPos._1) - 1), $(newHPos._2)),
+                                (x, y) -> {
+                                    log.debug("horizontal left \n{} - {}", oldTPos, newHPos);
+                                    return Tuple.of(x + 1, y);
+                                }),
+                        // on same horizontal line - right
+                        Case($Tuple2($((Integer x) -> x > (newHPos._1) + 1), $(newHPos._2)),
+                                (x, y) -> {
+                                    log.debug("horizontal right \n{} - {}", oldTPos, newHPos);
+                                    return Tuple.of(x - 1, y);
+                                }),
 
-                                // on same vertical line - up
-                                Case($Tuple2($(newHPos._1), $((Integer y) -> y > (newHPos._2) + 1)),
-                                        (x, y) -> {
-                                            log.debug("vertical up \n{} - {}", oldTPos, newHPos);
-                                            return Tuple.of(x, y - 1);
-                                        }),
-                                // on same vertical line - down
-                                Case($Tuple2($(newHPos._1), $((Integer y) -> y < (newHPos._2) - 1)),
-                                        (x, y) -> {
-                                            log.debug("vertical down \n{} - {}", oldTPos, newHPos);
-                                            return Tuple.of(x, y + 1);
-                                        }),
+                        // on same vertical line - up
+                        Case($Tuple2($(newHPos._1), $((Integer y) -> y > (newHPos._2) + 1)),
+                                (x, y) -> {
+                                    log.debug("vertical up \n{} - {}", oldTPos, newHPos);
+                                    return Tuple.of(x, y - 1);
+                                }),
+                        // on same vertical line - down
+                        Case($Tuple2($(newHPos._1), $((Integer y) -> y < (newHPos._2) - 1)),
+                                (x, y) -> {
+                                    log.debug("vertical down \n{} - {}", oldTPos, newHPos);
+                                    return Tuple.of(x, y + 1);
+                                }),
 
-                                // on diagonal up left
-                                Case($((Tuple2<Integer, Integer> xy) -> xy._1 < (newHPos._1 - 1) && xy._2 < (newHPos._2 - 1)),
-                                        (xy) -> {
-                                            log.debug("diag up left\n{} - {}", oldTPos, newHPos);
-                                            return Tuple.of(xy._1 + 1, xy._2 + 1);
-                                        }),
+                        // on diagonal up left
+                        Case($((Tuple2<Integer, Integer> xy) -> xy._1 < (newHPos._1 - 1) && xy._2 < (newHPos._2 - 1)),
+                                (xy) -> {
+                                    log.debug("diag up left\n{} - {}", oldTPos, newHPos);
+                                    return Tuple.of(xy._1 + 1, xy._2 + 1);
+                                }),
 
-                                // on diagonal down left
-                                Case($((Tuple2<Integer, Integer> xy) -> xy._1 < (newHPos._1 - 1) && xy._2 > (newHPos._2 + 1)),
-                                        (xy) -> {
-                                            log.debug("diag down left\n{} - {}", oldTPos, newHPos);
-                                            return Tuple.of(xy._1 + 1, xy._2 - 1);
-                                        }),
+                        // on diagonal down left
+                        Case($((Tuple2<Integer, Integer> xy) -> xy._1 < (newHPos._1 - 1) && xy._2 > (newHPos._2 + 1)),
+                                (xy) -> {
+                                    log.debug("diag down left\n{} - {}", oldTPos, newHPos);
+                                    return Tuple.of(xy._1 + 1, xy._2 - 1);
+                                }),
 
-                                // on diagonal up right
-                                Case($((Tuple2<Integer, Integer> xy) -> xy._1 > (newHPos._1 + 1) && xy._2 < (newHPos._2 - 1)),
-                                        (xy) -> {
-                                            log.debug("diag up right\n{} - {}", oldTPos, newHPos);
-                                            return Tuple.of(xy._1 - 1, xy._2 + 1);
-                                        }),
+                        // on diagonal up right
+                        Case($((Tuple2<Integer, Integer> xy) -> xy._1 > (newHPos._1 + 1) && xy._2 < (newHPos._2 - 1)),
+                                (xy) -> {
+                                    log.debug("diag up right\n{} - {}", oldTPos, newHPos);
+                                    return Tuple.of(xy._1 - 1, xy._2 + 1);
+                                }),
 
-                                // on diagonal down right
-                                Case($((Tuple2<Integer, Integer> xy) -> xy._1 > (newHPos._1 + 1) && xy._2 > (newHPos._2 + 1)),
-                                        (xy) -> {
-                                            log.debug("diag down right\n{} - {}", oldTPos, newHPos);
-                                            return Tuple.of(xy._1 - 1, xy._2 - 1);
-                                        }),
-
-
-                                // on diagonal up left
-                                Case($((Tuple2<Integer, Integer> xy) -> xy._1 < (newHPos._1 - 1) && xy._2 < (newHPos._2)),
-                                        (xy) -> {
-                                            log.debug("diag up left\n{} - {}", oldTPos, newHPos);
-                                            return Tuple.of(xy._1 + 1, xy._2 + 1);
-                                        }),
-
-                                // on diagonal down left
-                                Case($((Tuple2<Integer, Integer> xy) -> xy._1 < (newHPos._1 - 1) && xy._2 > (newHPos._2)),
-                                        (xy) -> {
-                                            log.debug("diag down left\n{} - {}", oldTPos, newHPos);
-                                            return Tuple.of(xy._1 + 1, xy._2 - 1);
-                                        }),
-
-                                // on diagonal up right
-                                Case($((Tuple2<Integer, Integer> xy) -> xy._1 > (newHPos._1 + 1) && xy._2 < (newHPos._2)),
-                                        (xy) -> {
-                                            log.debug("diag up right\n{} - {}", oldTPos, newHPos);
-                                            return Tuple.of(xy._1 - 1, xy._2 + 1);
-                                        }),
-
-                                // on diagonal down right
-                                Case($((Tuple2<Integer, Integer> xy) -> xy._1 > (newHPos._1 + 1) && xy._2 > (newHPos._2)),
-                                        (xy) -> {
-                                            log.debug("diag down right\n{} - {}", oldTPos, newHPos);
-                                            return Tuple.of(xy._1 - 1, xy._2 - 1);
-                                        }),
+                        // on diagonal down right
+                        Case($((Tuple2<Integer, Integer> xy) -> xy._1 > (newHPos._1 + 1) && xy._2 > (newHPos._2 + 1)),
+                                (xy) -> {
+                                    log.debug("diag down right\n{} - {}", oldTPos, newHPos);
+                                    return Tuple.of(xy._1 - 1, xy._2 - 1);
+                                }),
 
 
-                                // on diagonal up left
-                                Case($((Tuple2<Integer, Integer> xy) -> xy._1 < (newHPos._1) && xy._2 < (newHPos._2 - 1)),
-                                        (xy) -> {
-                                            log.debug("diag up left\n{} - {}", oldTPos, newHPos);
-                                            return Tuple.of(xy._1 + 1, xy._2 + 1);
-                                        }),
+                        // on diagonal up left
+                        Case($((Tuple2<Integer, Integer> xy) -> xy._1 < (newHPos._1 - 1) && xy._2 < (newHPos._2)),
+                                (xy) -> {
+                                    log.debug("diag up left\n{} - {}", oldTPos, newHPos);
+                                    return Tuple.of(xy._1 + 1, xy._2 + 1);
+                                }),
 
-                                // on diagonal down left
-                                Case($((Tuple2<Integer, Integer> xy) -> xy._1 < (newHPos._1) && xy._2 > (newHPos._2 + 1)),
-                                        (xy) -> {
-                                            log.debug("diag down left\n{} - {}", oldTPos, newHPos);
-                                            return Tuple.of(xy._1 + 1, xy._2 - 1);
-                                        }),
+                        // on diagonal down left
+                        Case($((Tuple2<Integer, Integer> xy) -> xy._1 < (newHPos._1 - 1) && xy._2 > (newHPos._2)),
+                                (xy) -> {
+                                    log.debug("diag down left\n{} - {}", oldTPos, newHPos);
+                                    return Tuple.of(xy._1 + 1, xy._2 - 1);
+                                }),
 
-                                // on diagonal up right
-                                Case($((Tuple2<Integer, Integer> xy) -> xy._1 > (newHPos._1) && xy._2 < (newHPos._2 - 1)),
-                                        (xy) -> {
-                                            log.debug("diag up right\n{} - {}", oldTPos, newHPos);
-                                            return Tuple.of(xy._1 - 1, xy._2 + 1);
-                                        }),
+                        // on diagonal up right
+                        Case($((Tuple2<Integer, Integer> xy) -> xy._1 > (newHPos._1 + 1) && xy._2 < (newHPos._2)),
+                                (xy) -> {
+                                    log.debug("diag up right\n{} - {}", oldTPos, newHPos);
+                                    return Tuple.of(xy._1 - 1, xy._2 + 1);
+                                }),
 
-                                // on diagonal down right
-                                Case($((Tuple2<Integer, Integer> xy) -> xy._1 > (newHPos._1) && xy._2 > (newHPos._2 + 1)),
-                                        (xy) -> {
-                                            log.debug("diag down right\n{} - {}", oldTPos, newHPos);
-                                            return Tuple.of(xy._1 - 1, xy._2 - 1);
-                                        }),
+                        // on diagonal down right
+                        Case($((Tuple2<Integer, Integer> xy) -> xy._1 > (newHPos._1 + 1) && xy._2 > (newHPos._2)),
+                                (xy) -> {
+                                    log.debug("diag down right\n{} - {}", oldTPos, newHPos);
+                                    return Tuple.of(xy._1 - 1, xy._2 - 1);
+                                }),
 
-                                // default
-                                Case($(), () -> {
-                                    log.debug("T unchanged\n{} - {}", oldTPos, newHPos);
-                                    return oldTPos;
-                                }));
+
+                        // on diagonal up left
+                        Case($((Tuple2<Integer, Integer> xy) -> xy._1 < (newHPos._1) && xy._2 < (newHPos._2 - 1)),
+                                (xy) -> {
+                                    log.debug("diag up left\n{} - {}", oldTPos, newHPos);
+                                    return Tuple.of(xy._1 + 1, xy._2 + 1);
+                                }),
+
+                        // on diagonal down left
+                        Case($((Tuple2<Integer, Integer> xy) -> xy._1 < (newHPos._1) && xy._2 > (newHPos._2 + 1)),
+                                (xy) -> {
+                                    log.debug("diag down left\n{} - {}", oldTPos, newHPos);
+                                    return Tuple.of(xy._1 + 1, xy._2 - 1);
+                                }),
+
+                        // on diagonal up right
+                        Case($((Tuple2<Integer, Integer> xy) -> xy._1 > (newHPos._1) && xy._2 < (newHPos._2 - 1)),
+                                (xy) -> {
+                                    log.debug("diag up right\n{} - {}", oldTPos, newHPos);
+                                    return Tuple.of(xy._1 - 1, xy._2 + 1);
+                                }),
+
+                        // on diagonal down right
+                        Case($((Tuple2<Integer, Integer> xy) -> xy._1 > (newHPos._1) && xy._2 > (newHPos._2 + 1)),
+                                (xy) -> {
+                                    log.debug("diag down right\n{} - {}", oldTPos, newHPos);
+                                    return Tuple.of(xy._1 - 1, xy._2 - 1);
+                                }),
+
+                        // default
+                        Case($(), () -> {
+                            log.debug("T unchanged\n{} - {}", oldTPos, newHPos);
+                            return oldTPos;
+                        }));
 
         var res = Vector.ofAll(input.lines())
                 .map(l -> l.split(" "))
                 .map(a -> Tuple.of(a[0], parseInt(a[1])))
                 .foldLeft(Tuple.of(HashSet.empty(), Vector.fill(10, Tuple.of(0, 0))), (tailPosAndRopePositions, action) ->
-                    Vector.fill(action._2, 0).foldLeft(tailPosAndRopePositions, (acc, __) -> {
-                        Vector<Tuple2<Integer, Integer>> newPositions = acc._2.foldLeft(Vector.empty(), (positions, knot) -> {
+                        Vector.fill(action._2, 0).foldLeft(tailPosAndRopePositions, (acc, __) -> {
+                            Vector<Tuple2<Integer, Integer>> newPositions = acc._2.foldLeft(Vector.empty(), (positions, knot) -> {
 
-                            if (positions.isEmpty()) {
-                                var hKnot = positions.isEmpty() ? knot : positions.last();
-                                Tuple2<Integer, Integer> newHPos = Match(action._1).of(
-                                        Case($("R"), Tuple.of(hKnot._1 + 1, hKnot._2)),
-                                        Case($("D"), Tuple.of(hKnot._1, hKnot._2 - 1)),
-                                        Case($("L"), Tuple.of(hKnot._1 - 1, hKnot._2)),
-                                        Case($("U"), Tuple.of(hKnot._1, hKnot._2 + 1)));
-                                return positions.append(newHPos);
-                            }
+                                if (positions.isEmpty()) {
+                                    var hKnot = positions.isEmpty() ? knot : positions.last();
+                                    Tuple2<Integer, Integer> newHPos = Match(action._1).of(
+                                            Case($("R"), Tuple.of(hKnot._1 + 1, hKnot._2)),
+                                            Case($("D"), Tuple.of(hKnot._1, hKnot._2 - 1)),
+                                            Case($("L"), Tuple.of(hKnot._1 - 1, hKnot._2)),
+                                            Case($("U"), Tuple.of(hKnot._1, hKnot._2 + 1)));
+                                    return positions.append(newHPos);
+                                }
 
-                            return positions.append(computeHAntTPos.apply(positions.last(), knot));
-                        });
-                        return Tuple.of(acc._1.add(newPositions.last()), newPositions);
-                    }))
+                                return positions.append(computeHAntTPos.apply(positions.last(), knot));
+                            });
+                            return Tuple.of(acc._1.add(newPositions.last()), newPositions);
+                        }))
                 ._1
                 .size();
 
