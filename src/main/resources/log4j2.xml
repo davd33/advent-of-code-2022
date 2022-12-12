@@ -12,8 +12,6 @@
     </Appenders>
 
     <Loggers>
-        <Logger name="davd33.aoc" level="info">
-            <AppenderRef ref="Console"/>
-        </Logger>
+        <Logger name="davd33.aoc" level="info"/>
     </Loggers>
 </Configuration>

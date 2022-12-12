@@ -3,9 +3,7 @@ package davd33.aoc;
 import com.google.common.io.Resources;
 import davd33.aoc.domain.*;
 import davd33.aoc.domain.MonkeysBusiness.Monkey;
-import io.vavr.Function2;
-import io.vavr.Tuple;
-import io.vavr.Tuple2;
+import io.vavr.*;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.Set;
@@ -19,6 +17,7 @@ import lombok.extern.log4j.Log4j2;
 import java.math.BigInteger;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -31,12 +30,80 @@ import static java.lang.Integer.parseInt;
 public class App {
 
     public static void main(String[] args) {
-        runDay11();
+        runDay12();
     }
 
     private static <T> T log(T value) {
         log.info(value);
         return value;
+    }
+
+    public static Vector<Tuple3<Tuple2<Integer, Integer>, Integer, Integer>> path(
+
+            Function1<Tuple2<Integer, Integer>, Option<Character>> getChar,
+            Tuple2<Tuple2<Integer, Integer>, Integer> from,
+            TreeSet<Tuple2<Integer, Integer>> visited) {
+
+        Function1<Tuple2<Tuple2<Integer, Integer>, Integer>,
+                Vector<Tuple2<Tuple2<Tuple2<Integer, Integer>, Character>, Integer>>> streamFn = S -> Vector.of(
+                        getChar.apply(Tuple.of(S._1._1 - 1, S._1._2)).map(c -> Tuple.of(Tuple.of(S._1._1 - 1, S._1._2), c)),
+                        getChar.apply(Tuple.of(S._1._1 + 1, S._1._2)).map(c -> Tuple.of(Tuple.of(S._1._1 + 1, S._1._2), c)),
+                        getChar.apply(Tuple.of(S._1._1, S._1._2 - 1)).map(c -> Tuple.of(Tuple.of(S._1._1, S._1._2 - 1), c)),
+                        getChar.apply(Tuple.of(S._1._1, S._1._2 + 1)).map(c -> Tuple.of(Tuple.of(S._1._1, S._1._2 + 1), c)))
+                .zipWithIndex()
+                .filter(t -> t._1.isDefined())
+                .map(t -> t.map1(Option::get))
+                .foldLeft(Vector.<Tuple2<Tuple2<Tuple2<Integer, Integer>, Character>, Integer>>empty(),
+                        (acc, t) -> t._1._2.equals('E') ? Vector.of(t) : (acc.exists(a -> a._1._2.equals('E')) ? acc : acc.append(t)))
+                .filter(data -> getChar.apply(S._1).get().equals('S') || data._1._2.equals('E') || (
+                        data._1._2.charValue() - getChar.apply(S._1).get().charValue() <= 1 &&
+                                !visited.contains(data._1._1)));
+
+        return streamFn
+                .andThen(f -> Tuple.of(f, f.maxBy(t -> t._1._2)))
+                .andThen(f -> f._1
+                        .filter(t -> f._2.exists(t2 -> t2._1._2.equals(t._1._2)))
+                        .map(posIndex -> posIndex.map1(Tuple2::_1))
+                        .map(posIndex -> Tuple.of(posIndex._1, posIndex._2)))
+                .andThen(f -> f
+                        .map(t -> Tuple.of(t._1, t._2, visited.size() + 1))
+                        .flatMap(pos -> path(getChar, Tuple.of(pos._1, pos._2), visited.add(pos._1)))).apply(from);
+    }
+
+    public static void runDay12() {
+        URL inputUrl = Resources.getResource("input/d12-test");
+        String input = Try.of(() -> Resources.toString(inputUrl, StandardCharsets.UTF_8)).get();
+        Vector<Vector<Character>> map = Vector.of(input.split("\n")).map(s -> Vector.ofAll(s.toCharArray()));
+        Vector<Tuple2<Integer, Integer>> S_E = map.zipWithIndex().flatMap(y -> y._1.zipWithIndex()
+                        .map(x -> Vector.of('S', 'E').contains(x._1) ? Tuple.of(x._2, y._2) : null)
+                        .filter(Objects::nonNull));
+
+        Function1<Tuple2<Integer, Integer>, Option<Character>> getChar = (pos) ->
+                pos._1 >= 0 && pos._1 < map.head().size() && pos._2 >= 0 && pos._2 < map.size() ?
+                        Option.of(map.get(pos._2).get(pos._1)) : Option.none();
+
+        Vector<Tuple3<Tuple2<Integer, Integer>, Integer, Integer>> path = path(getChar, Tuple.of(S_E.head(), -1), TreeSet.empty());
+
+        map.zipWithIndex().forEach(y -> {
+            y._1.zipWithIndex().forEach(x -> {
+                var match = path.zipWithIndex().find(t -> t._1._1.equals(Tuple.of(x._2, y._2)));
+
+                Character step = match.flatMap(m -> m._2 +1 < path.size() ? Some(path.get(m._2 +1)) : Option.none())
+                        .map(t -> t.map2(direction -> Vector.of('<', '>', '^', 'v').get(direction)))
+                        .map(t -> t._2)
+                        .getOrElse(match.flatMap(m -> m._2 +1 >= path.size() ? Some('E') : Option.none())
+                                .getOrElse('.'));
+
+                System.out.print(step);
+            });
+            System.out.println();
+        });
+
+        for (Vector<Character> y : map) {
+            System.out.println(y.toCharSeq());
+        }
+
+        log.info(path.size());
     }
 
     public static void runDay11() {
